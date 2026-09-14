@@ -1,0 +1,43 @@
+name: Beethoven 9 complete render
+
+on:
+  push:
+    branches:
+      - tmp-beethoven9-render-20260915
+
+permissions:
+  contents: read
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download four public-domain movements
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o 01.mp3 'https://archive.org/download/horenstein-pantheon-xp-2250/01%20Horenstein%209.%20Beethoven%20Pantheon%20XP%202550%20-%201.%20Satz.mp3'
+          curl -L --fail --retry 3 -o 02.mp3 'https://archive.org/download/horenstein-pantheon-xp-2250/02%20Horenstein%209.%20Beethoven%20Pantheon%20XP%202550%20-%202.%20Satz.mp3'
+          curl -L --fail --retry 3 -o 03.mp3 'https://archive.org/download/horenstein-pantheon-xp-2250/03%20Horenstein%209.%20Beethoven%20Pantheon%20XP%202550%20-%203.%20Satz.mp3'
+          curl -L --fail --retry 3 -o 04.mp3 'https://archive.org/download/horenstein-pantheon-xp-2250/04%20Horenstein%209.%20Beethoven%20Pantheon%20XP%202550%20-%204.%20Satz.mp3'
+
+      - name: Join all movements into one MP3
+        shell: bash
+        run: |
+          set -euo pipefail
+          printf "file '%s'\n" 01.mp3 02.mp3 03.mp3 04.mp3 > concat.txt
+          ffmpeg -hide_banner -y -f concat -safe 0 -i concat.txt \
+            -map_metadata -1 -c:a libmp3lame -b:a 192k \
+            -metadata title='Symphony No. 9 in D minor, Op. 125 – Complete' \
+            -metadata artist='Ludwig van Beethoven' \
+            -metadata album='Symphony No. 9 – Complete' \
+            Beethoven_9_Complete.mp3
+          ffprobe -v error -show_entries format=duration,size -of default=noprint_wrappers=1 Beethoven_9_Complete.mp3
+
+      - name: Upload complete symphony
+        uses: actions/upload-artifact@v4
+        with:
+          name: Beethoven-9-Complete-MP3
+          path: Beethoven_9_Complete.mp3
+          if-no-files-found: error
+          retention-days: 1
